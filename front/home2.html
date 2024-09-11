@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Jobs</title>
+    <style>
+        /* تنسيق الصفحة */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        #logoutButton {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        #logoutButton:hover {
+            background-color: #c82333;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .search-container input {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        .jobs-list {
+            margin-top: 20px;
+        }
+
+        .job-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .job-item h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .job-item p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .job-item button {
+            background-color: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .job-item button.accept {
+            background-color: #28a745;
+        }
+
+        .job-item button.reject {
+            background-color: #dc3545;
+        }
+
+        .job-item button:hover {
+            opacity: 0.9;
+        }
+
+        .job-item button.accept:hover {
+            background-color: #218838;
+        }
+
+        .job-item button.reject:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <button id="logoutButton">Log Out</button>
+        <h2>Welcome, <span id="candidateName"></span>!</h2>
+
+        <!-- Search bar -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search for jobs...">
+        </div>
+
+        <!-- عرض الوظائف -->
+        <div class="jobs-list" id="jobsList"></div>
+    </div>
+
+    <script>
+        const candidate = JSON.parse(localStorage.getItem('candidate'));
+
+        if (candidate) {
+            document.getElementById('candidateName').textContent = candidate.first_name + ' ' + candidate.last_name;
+        } else {
+            window.location.href = '/logincandidate.html';
+        }
+
+        document.getElementById('logoutButton').addEventListener('click', function () {
+            localStorage.removeItem('candidate');
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function () {
+            fetchJobs(this.value);
+        });
+
+        async function fetchJobs(query = '') {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/jobsall');
+                const result = await response.json();
+
+                const jobsList = document.getElementById('jobsList');
+                jobsList.innerHTML = '';
+
+                if (response.ok && result.length > 0) {
+                    const filteredJobs = result.filter(job =>
+                        job.title.toLowerCase().includes(query.toLowerCase()) ||
+                        job.description.toLowerCase().includes(query.toLowerCase())
+                    );
+
+                    if (filteredJobs.length > 0) {
+                        filteredJobs.forEach(job => {
+                            const jobItem = document.createElement('div');
+                            jobItem.classList.add('job-item');
+                            jobItem.innerHTML = `
+                                <h3>${job.title}</h3>
+                                <p><strong>Description:</strong> ${job.description}</p>
+                                <p><strong>Skills:</strong> ${JSON.parse(job.skills).join(', ')}</p>
+                                <p><strong>Status:</strong> ${job.status}</p>
+                                <button class="accept" onclick="applyJob(${job.id})">Apply</button>
+                            `;
+                            jobsList.appendChild(jobItem);
+                        });
+                    } else {
+                        jobsList.innerHTML = '<p>No jobs match your search criteria.</p>';
+                    }
+                } else {
+                    jobsList.innerHTML = '<p>No jobs available.</p>';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+
+        async function applyJob(jobId) {
+            const coverLetter = prompt('Enter your cover letter:');
+            if (!coverLetter) return;
+
+            const applicationData = {
+                job_id: jobId,
+                candidate_id: candidate.id,
+                cover_letter: coverLetter
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/applications/store', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(applicationData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                } else {
+                    alert('Error applying for job');
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+
+        // Initial load
+        fetchJobs();
+    </script>
+</body>
+
+</html>

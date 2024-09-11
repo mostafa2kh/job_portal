@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Employee Jobs</title>
+    <style>
+        /* تنسيق الصفحة */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        form input,
+        form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        form button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        form button:hover {
+            background-color: #218838;
+        }
+
+        #responseMessage {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #displayJobsButton,
+        #logoutButton {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        #logoutButton {
+            background-color: #dc3545;
+        }
+
+        #displayJobsButton:hover {
+            background-color: #0056b3;
+        }
+
+        #logoutButton:hover {
+            background-color: #c82333;
+        }
+
+        .jobs-list,
+        .applications-list {
+            margin-top: 20px;
+        }
+
+        .job-item,
+        .application-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .job-item h3,
+        .application-item h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .job-item p,
+        .application-item p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .job-item button,
+        .application-item button {
+            background-color: #ffc107;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .application-item .accept {
+            background-color: #28a745;
+        }
+
+        .application-item .reject {
+            background-color: #dc3545;
+        }
+
+        .job-item button:hover,
+        .application-item button:hover {
+            opacity: 0.9;
+        }
+
+        .application-item .accept:hover {
+            background-color: #218838;
+        }
+
+        .application-item .reject:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Welcome, <span id="userName"></span>!</h2>
+
+        <!-- Form لإضافة وظيفة جديدة -->
+        <form id="jobForm">
+            <label for="title">Job Title:</label>
+            <input type="text" id="title" name="title" required>
+
+            <label for="description">Job Description:</label>
+            <textarea id="description" name="description" required></textarea>
+
+            <label for="skills">Skills (comma separated):</label>
+            <input type="text" id="skills" name="skills" required>
+
+            <button type="submit">Submit Job</button>
+        </form>
+
+        <p id="responseMessage"></p>
+
+        <div style="text-align: center;">
+            <button id="displayJobsButton">Display My Jobs</button>
+            <button id="logoutButton">Log Out</button>
+        </div>
+
+        <!-- عرض الوظائف -->
+        <div class="jobs-list" id="jobsList"></div>
+
+        <!-- عرض الطلبات -->
+        <div class="applications-list" id="applicationsList"></div>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (user) {
+            document.getElementById('userName').textContent = user.first_name + ' ' + user.last_name;
+        } else {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutButton').addEventListener('click', function () {
+            localStorage.removeItem('user');
+            window.location.href = '/home/mostafa/Documents/final_project/front/loginemplyee.html';
+        });
+
+        document.getElementById('jobForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const jobData = {
+                employee_id: user.id,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                skills: document.getElementById('skills').value.split(',').map(skill => skill.trim())
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/jobs/store', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(jobData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = result.message;
+                    document.getElementById('responseMessage').style.color = 'green';
+                } else {
+                    document.getElementById('responseMessage').textContent = 'Error: ' + result.message;
+                    document.getElementById('responseMessage').style.color = 'red';
+                }
+            } catch (error) {
+                document.getElementById('responseMessage').textContent = 'An error occurred: ' + error.message;
+                document.getElementById('responseMessage').style.color = 'red';
+            }
+        });
+
+        document.getElementById('displayJobsButton').addEventListener('click', async function () {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/jobs/index/${user.id}`);
+                const result = await response.json();
+
+                const jobsList = document.getElementById('jobsList');
+                jobsList.innerHTML = '';
+
+                if (response.ok && result.jobs.length > 0) {
+                    result.jobs.forEach(job => {
+                        const jobItem = document.createElement('div');
+                        jobItem.classList.add('job-item');
+                        jobItem.innerHTML = `
+                            <h3>${job.title}</h3>
+                            <p><strong>Description:</strong> ${job.description}</p>
+                            <p><strong>Skills:</strong> ${job.skills}</p>
+                            <p><strong>Status:</strong> ${job.status}</p>
+                            <button class="update" onclick="updateJob(${job.id})">Update</button>
+                            <button class="delete" onclick="deleteJob(${job.id})">Delete</button>
+                            <button onclick="viewApplications(${job.id})">View Applications</button>
+                        `;
+                        jobsList.appendChild(jobItem);
+                    });
+                } else {
+                    jobsList.innerHTML = '<p>No jobs found.</p>';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        });
+
+        async function deleteJob(jobId) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/jobs/destroy/${jobId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = 'Job deleted successfully!';
+                    document.getElementById('responseMessage').style.color = 'green';
+                    document.getElementById('displayJobsButton').click();  // إعادة تحميل الوظائف
+                } else {
+                    document.getElementById('responseMessage').textContent = 'Error deleting job';
+                    document.getElementById('responseMessage').style.color = 'red';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+
+        async function updateJob(jobId) {
+            const title = prompt('Enter new job title:');
+            const description = prompt('Enter new job description:');
+            const skills = prompt('Enter new skills (comma separated):');
+            const status = prompt('Enter job status (e.g., open/closed):');
+
+            const jobData = {
+                title,
+                description,
+                skills: skills.split(',').map(skill => skill.trim()),
+                status
+            };
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/jobs/update/${jobId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(jobData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = 'Job updated successfully!';
+                    document.getElementById('responseMessage').style.color = 'green';
+                    document.getElementById('displayJobsButton').click();  // إعادة تحميل الوظائف
+                } else {
+                    document.getElementById('responseMessage').textContent = 'Error updating job';
+                    document.getElementById('responseMessage').style.color = 'red';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+
+        async function viewApplications(jobId) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/applications/jobs/applications/${jobId}`);
+                const result = await response.json();
+
+                const applicationsList = document.getElementById('applicationsList');
+                applicationsList.innerHTML = '';
+
+                if (response.ok && result.applications.length > 0) {
+                    result.applications.forEach(application => {
+                        const applicationItem = document.createElement('div');
+                        applicationItem.classList.add('application-item');
+                        applicationItem.dataset.id = application.id;
+                        applicationItem.innerHTML = `
+                            <h3>Candidate: <a href="candidate-details.html?id=${application.candidate.id}">${application.candidate.first_name} ${application.candidate.last_name}</a></h3>
+                            <p><strong>Cover Letter:</strong> ${application.cover_letter}</p>
+                            <p><strong>Status:</strong> ${application.status}</p>
+                            <button class="accept" onclick="updateApplication(${application.id}, 'Accepted')">Accept</button>
+                            <button class="reject" onclick="updateApplication(${application.id}, 'Rejected')">Reject</button>
+                        `;
+                        applicationsList.appendChild(applicationItem);
+                    });
+                } else {
+                    applicationsList.innerHTML = '<p>No applications found for this job.</p>';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+
+        async function updateApplication(applicationId, status) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/applications/update/${applicationId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = 'Application status updated!';
+                    document.getElementById('responseMessage').style.color = 'green';
+                    document.getElementById('displayJobsButton').click();  // إعادة تحميل الطلبات
+                } else {
+                    document.getElementById('responseMessage').textContent = 'Error updating application';
+                    document.getElementById('responseMessage').style.color = 'red';
+                }
+            } catch (error) {
+                console.log('Error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>
